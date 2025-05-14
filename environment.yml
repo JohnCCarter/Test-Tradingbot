@@ -1,0 +1,9 @@
+name: tradingbot
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - pydantic
+  - ccxt
+  - pytest
+  - pre-commit
