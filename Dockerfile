@@ -1,31 +1,26 @@
-FROM python:alpine
+# Use official Miniconda base image for simplicity and speed
+FROM continuumio/miniconda3:23.3.1
 
-# 1) Uppgradera pip & installera byggverktyg
-RUN apk add --no-cache \
-        build-base \
-        wget \
-        curl \
-        libffi-dev \
-        openssl-dev \
-        python3-dev \
-    && python3 -m ensurepip \
-    && pip3 install --upgrade pip
-
-# 2) Kopiera environment.yml och skapa conda-miljön
+# Set working directory
 WORKDIR /app
-COPY environment.yml /app/
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh \
- && bash miniconda.sh -b -p /opt/miniconda \
- && rm miniconda.sh \
- && /opt/miniconda/bin/conda init \
- && /opt/miniconda/bin/conda env create -f /app/environment.yml \
- && /opt/miniconda/bin/conda clean -afy
 
-# 3) Lägg conda-miljöns bin först i PATH
-ENV PATH="/opt/miniconda/envs/tradingbot_env/bin:$PATH"
+# Copy and create the conda environment
+COPY environment.yml ./
+RUN conda env create -f environment.yml && \
+    conda clean -afy
 
-# 4) Kopiera resten av koden
-COPY . /app/
+# Activate the environment by default
+SHELL ["/bin/bash", "-lc"]
 
-# 5) Startkommando
-CMD ["python", "src/tradingbot.py"]
+# Copy the full codebase
+COPY . .
+
+# Install the package in editable mode
+RUN pip install --upgrade pip && \
+    pip install -e .
+
+# Expose optional metrics and health ports
+EXPOSE 8001 5001
+
+# Default command: activate conda env and run bot
+CMD ["bash", "-lc", "conda activate tradingbot_env && python src/tradingbot.py"]

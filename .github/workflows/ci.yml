@@ -1,0 +1,33 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9.22', '3.12.1']
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Conda environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          environment-file: environment.yml
+          activate-environment: tradingbot_env
+          auto-activate-base: false
+
+      - name: Install project dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+
+      - name: Run tests (Python ${{ matrix.python-version }})
+        run: pytest --maxfail=1 --disable-warnings --verbose
