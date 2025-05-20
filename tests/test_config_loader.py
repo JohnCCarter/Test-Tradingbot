@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 import json
 import pytest
 from config_loader import load_config, BotConfig

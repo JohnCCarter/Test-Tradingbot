@@ -79,6 +79,10 @@ def load_config(path: str = "config.json") -> BotConfig:
     raw["EMAIL_RECEIVER"] = os.getenv("EMAIL_RECEIVER", raw.get("EMAIL_RECEIVER"))
     raw["EMAIL_PASSWORD"] = os.getenv("EMAIL_PASSWORD", raw.get("EMAIL_PASSWORD"))
 
+    # Ta bort API-nycklar från raw dictionaryt för att undvika TypeError
+    raw.pop("API_KEY", None)
+    raw.pop("API_SECRET", None)
+
     return BotConfig(
         API_KEY=api_key,
         API_SECRET=api_secret,

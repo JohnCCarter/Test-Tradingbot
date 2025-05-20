@@ -1,4 +1,4 @@
-.PHONY: update-env format lint test run shell
+.PHONY: update-env format lint test run shell backtest dashboard
 
 # Uppdatera eller skapa conda-miljön från environment.yml
 update-env:
@@ -21,6 +21,14 @@ test:
 run:
 	python src/tradingbot.py
 
+# Starta dashboard
+dashboard:
+	python src/dashboard.py
+
 # Öppna interaktiv shell
 shell:
 	conda activate tradingbot_env && ipython
+
+# Kör backtest
+backtest:
+	python src/backtest.py -d data/ohlcv.csv -c config.json

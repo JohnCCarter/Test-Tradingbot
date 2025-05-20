@@ -17,7 +17,7 @@ COPY . .
 
 # Install the package in editable mode
 RUN pip install --upgrade pip && \
-    pip install -e . && \
+    pip install -e .
 
 # Expose optional metrics and health ports
 EXPOSE 8001 5001

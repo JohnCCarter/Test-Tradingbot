@@ -20,134 +20,217 @@ def setup_logger() -> logging.Logger:
     return logger
 
 
-@retry(max_attempts=3, initial_delay=1.0)
-async def main() -> None:
-    """
-    Main async entrypoint for the tradingbot with risk sizing, SL/TP OCO orders.
-    """
-    log = setup_logger()
-    cfg = load_config()
+class TradingBot:
+    def __init__(self, config):
+        self.log = setup_logger()
+        self.cfg = config
+        self.exchange = None
+        self.is_running = False
+        self.current_position = None
+        self.trade_history = []
+        self.last_update = None
 
-    # Initialize exchange
-    exchange = init_exchange(
-        api_key=cfg.API_KEY,
-        api_secret=cfg.API_SECRET,
-        exchange_name=cfg.EXCHANGE
-    )
-    log.info("Tradingbot startad med OCO SL/TP-logik.")
-
-    # Fetch OHLCV data
-    log.info(f"Hämtar {cfg.LIMIT} candles för {cfg.SYMBOL} på {cfg.TIMEFRAME}")
-    ohlcv = exchange.fetch_ohlcv(cfg.SYMBOL, cfg.TIMEFRAME, limit=cfg.LIMIT)
-
-    # Build DataFrame
-    df = pd.DataFrame(
-        ohlcv,
-        columns=["timestamp", "open", "high", "low", "close", "volume"]
-    )
-    df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
-
-    # Calculate indicators
-    data = calculate_indicators(
-        df,
-        ema_length=cfg.EMA_LENGTH,
-        volume_multiplier=cfg.VOLUME_MULTIPLIER,
-        trading_start_hour=cfg.TRADING_START_HOUR,
-        trading_end_hour=cfg.TRADING_END_HOUR
-    )
-
-    # Detect bullish FVG breakout
-    low_zone, high_zone = detect_fvg(data, cfg.LOOKBACK, bullish=True)
-    last = data.iloc[-1]
-
-    # Entry conditions
-    if (
-        high_zone
-        and last["close"] > high_zone
-        and last["close"] > last["ema"]
-        and last["high_volume"]
-        and last["within_trading_hours"]
-    ):
-        entry_price = last["close"]
-        sl_price = entry_price * (1 - cfg.STOP_LOSS_PERCENT / 100)
-        tp_price = entry_price * (1 + cfg.TAKE_PROFIT_PERCENT / 100)
-
-        # Fetch account equity in quote currency
-        quote = cfg.SYMBOL.split(":")[-1]
-        balance_info = fetch_balance(exchange)
-        equity = balance_info.get("total", {}).get(quote, 0)
-
-        # Calculate position size based on risk per trade
-        size = calculate_position_size(
-            equity=equity,
-            risk_per_trade=cfg.RISK_PER_TRADE,
-            entry_price=entry_price,
-            stop_loss_price=sl_price
-        )
-
-        log.info(
-            f"Köp-signal: size={size:.6f}, entry={entry_price:.2f}, "
-            f"SL={sl_price:.2f}, TP={tp_price:.2f}"
-        )
-
-        # Place market buy order
-        buy_order = place_order("buy", cfg.SYMBOL, size)
-        log.info(f"Buy order sent: {buy_order}")
-
-                # Place OCO orders: TP limit and SL stop-limit
+    def start(self):
+        """Start the trading bot"""
+        if self.is_running:
+            self.log.warning("Bot is already running")
+            return False
+        
         try:
-            # TP: Limit sell at tp_price
-            tp_order = exchange.create_limit_sell_order(cfg.SYMBOL, size, tp_price)
-            # SL: Stop-limit sell at sl_price
-            sl_order = exchange.create_order(
-                cfg.SYMBOL,
-                'stop_limit',
-                'sell',
-                size,
-                sl_price,
-                {'stopPrice': sl_price}
+            self.exchange = init_exchange(
+                api_key=self.cfg.API_KEY,
+                api_secret=self.cfg.API_SECRET,
+                exchange_name=self.cfg.EXCHANGE
             )
-            tp_id = tp_order.get('id')
-            sl_id = sl_order.get('id')
-            log.info(
-                f"OCO orders placed: TP_order={tp_id}, SL_order={sl_id}"
-            )
-
-            # Monitor OCO: cancel the opposite order when one is executed
-            while True:
-                await asyncio.sleep(5)  # poll every 5 seconds
-                try:
-                    # Fetch order statuses
-                    tp_status = exchange.fetch_order(tp_id, cfg.SYMBOL).get('status')
-                    sl_status = exchange.fetch_order(sl_id, cfg.SYMBOL).get('status')
-                except Exception as err:
-                    log.error(f"Error fetching OCO order status: {err}")
-                    continue
-
-                if tp_status == 'closed':
-                    # TP executed, cancel SL
-                    try:
-                        exchange.cancel_order(sl_id, cfg.SYMBOL)
-                        log.info(f"SL order {sl_id} canceled after TP execution")
-                    except Exception as e:
-                        log.error(f"Failed to cancel SL order {sl_id}: {e}")
-                    break
-
-                if sl_status == 'closed':
-                    # SL executed, cancel TP
-                    try:
-                        exchange.cancel_order(tp_id, cfg.SYMBOL)
-                        log.info(f"TP order {tp_id} canceled after SL execution")
-                    except Exception as e:
-                        log.error(f"Failed to cancel TP order {tp_id}: {e}")
-                    break
-
+            self.is_running = True
+            self.log.info("Trading bot started")
+            return True
         except Exception as e:
-            log.error(f"Misslyckades placera eller övervaka OCO orders: {e}")
+            self.log.error(f"Error starting bot: {e}")
+            return False
 
-    # Sleep until next cycle
-    await asyncio.sleep(60)
-    await asyncio.sleep(60)
+    def stop(self):
+        """Stop the trading bot"""
+        if not self.is_running:
+            self.log.warning("Bot is not running")
+            return False
+        
+        try:
+            # Close any open positions
+            if self.current_position:
+                self.close_position("MANUAL")
+            
+            self.is_running = False
+            self.log.info("Trading bot stopped")
+            return True
+        except Exception as e:
+            self.log.error(f"Error stopping bot: {e}")
+            return False
+
+    def update_position(self):
+        """Update current position information"""
+        if not self.current_position:
+            return None
+        
+        try:
+            # Get current price
+            ticker = self.exchange.fetch_ticker(self.cfg.SYMBOL)
+            current_price = ticker['last']
+            
+            # Calculate unrealized PnL
+            entry_price = self.current_position['entry_price']
+            size = self.current_position['size']
+            unrealized_pnl = size * (current_price - entry_price)
+            
+            # Calculate time in position
+            entry_time = pd.Timestamp(self.current_position['entry_time'])
+            time_in_position = str(pd.Timestamp.now() - entry_time)
+            
+            self.current_position.update({
+                'current_price': current_price,
+                'unrealized_pnl': unrealized_pnl,
+                'time_in_position': time_in_position
+            })
+            
+            return self.current_position
+        except Exception as e:
+            self.log.error(f"Error updating position: {e}")
+            return None
+
+    def close_position(self, reason="MANUAL"):
+        """Close current position"""
+        if not self.current_position:
+            return None
+        
+        try:
+            # Get current price
+            ticker = self.exchange.fetch_ticker(self.cfg.SYMBOL)
+            exit_price = ticker['last']
+            
+            # Calculate PnL
+            entry_price = self.current_position['entry_price']
+            size = self.current_position['size']
+            pnl = size * (exit_price - entry_price)
+            
+            # Create trade record
+            trade = {
+                'timestamp': pd.Timestamp.now().isoformat(),
+                'type': self.current_position['type'],
+                'entry_price': entry_price,
+                'exit_price': exit_price,
+                'size': size,
+                'pnl': pnl,
+                'reason': reason
+            }
+            
+            # Add to trade history
+            self.trade_history.append(trade)
+            
+            # Clear current position
+            self.current_position = None
+            
+            return trade
+        except Exception as e:
+            self.log.error(f"Error closing position: {e}")
+            return None
+
+    async def run(self):
+        """Main trading loop"""
+        if not self.is_running:
+            return
+        
+        try:
+            # Fetch OHLCV data
+            ohlcv = self.exchange.fetch_ohlcv(
+                self.cfg.SYMBOL,
+                self.cfg.TIMEFRAME,
+                limit=self.cfg.LIMIT
+            )
+            
+            # Build DataFrame
+            df = pd.DataFrame(
+                ohlcv,
+                columns=["timestamp", "open", "high", "low", "close", "volume"]
+            )
+            df["datetime"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True)
+            
+            # Calculate indicators
+            data = calculate_indicators(
+                df,
+                ema_length=self.cfg.EMA_LENGTH,
+                volume_multiplier=self.cfg.VOLUME_MULTIPLIER,
+                trading_start_hour=self.cfg.TRADING_START_HOUR,
+                trading_end_hour=self.cfg.TRADING_END_HOUR
+            )
+            
+            # Update current position
+            if self.current_position:
+                self.update_position()
+                
+                # Check stop loss
+                if data.iloc[-1]['low'] <= self.current_position['sl_price']:
+                    self.close_position("SL")
+                
+                # Check take profit
+                elif data.iloc[-1]['high'] >= self.current_position['tp_price']:
+                    self.close_position("TP")
+            
+            # Look for new entry if no position
+            elif self.is_running:
+                low_zone, high_zone = detect_fvg(data, self.cfg.LOOKBACK, bullish=True)
+                last = data.iloc[-1]
+                
+                if high_zone and last['close'] > high_zone:
+                    # Calculate position size
+                    balance = fetch_balance(self.exchange)
+                    quote = self.cfg.SYMBOL.split(":")[-1]
+                    equity = balance.get("total", {}).get(quote, 0)
+                    
+                    entry_price = last['close']
+                    sl_price = entry_price * (1 - self.cfg.STOP_LOSS_PERCENT / 100)
+                    tp_price = entry_price * (1 + self.cfg.TAKE_PROFIT_PERCENT / 100)
+                    
+                    size = calculate_position_size(
+                        equity,
+                        self.cfg.RISK_PER_TRADE,
+                        entry_price,
+                        sl_price
+                    )
+                    
+                    # Place order
+                    order = place_order(
+                        "buy",
+                        self.cfg.SYMBOL,
+                        size=size,
+                        price=entry_price
+                    )
+                    
+                    if order:
+                        self.current_position = {
+                            'type': 'LONG',
+                            'entry_price': entry_price,
+                            'sl_price': sl_price,
+                            'tp_price': tp_price,
+                            'size': size,
+                            'entry_time': pd.Timestamp.now().isoformat()
+                        }
+                        self.log.info(f"Opened long position: {self.current_position}")
+            
+            self.last_update = pd.Timestamp.now()
+            
+        except Exception as e:
+            self.log.error(f"Error in trading loop: {e}")
+
+
+async def main():
+    """Main async entrypoint for the tradingbot"""
+    cfg = load_config()
+    bot = TradingBot(cfg)
+    
+    if bot.start():
+        while bot.is_running:
+            await bot.run()
+            await asyncio.sleep(5)  # Update every 5 seconds
 
 
 if __name__ == "__main__":

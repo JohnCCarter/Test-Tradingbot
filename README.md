@@ -1,37 +1,98 @@
-# TradingBot
+# Trading Bot
 
-![Build Status](https://img.shields.io/github/actions/workflow/status/JohnCCarter/tradingbot/ci.yml)
-![Coverage](https://img.shields.io/codecov/c/github/JohnCCarter/tradingbot)
-![License](https://img.shields.io/github/license/JohnCCarter/tradingbot)
+En Python-baserad tradingbot som använder FVG breakout strategi med EMA, volym och trading-tider.
 
-A Python-based trading bot template.
+## Funktioner
+
+- FVG breakout strategi
+- Risk management med position sizing
+- Stop-loss och take-profit
+- Paper trading för testning
+- Backtesting
+- E-postnotifieringar
+- Metrik- och hälsöövervakning
 
 ## Installation
 
-Clone the repository and install dependencies:
-
+1. Klona repot:
 ```bash
-conda env create -f environment.yml
+git clone <repo-url>
+cd tradingbot
 ```
 
-## Usage
-
-Run the bot:
-
+2. Skapa och aktivera conda-miljön:
 ```bash
-python src/tradingbot.py
+make update-env
+conda activate tradingbot_env
 ```
 
-## Testing
-
-Run tests:
-
+3. Konfigurera miljövariabler:
 ```bash
-pytest tests/
+cp .env.example .env
+# Redigera .env med dina API-nycklar
 ```
 
-## Roadmap
+## Användning
 
-- [ ] Add more technical indicators
-- [ ] Integrate live trading
-- [ ] Improve error handling
+### Starta boten
+```bash
+make run
+```
+
+### Kör backtest
+```bash
+make backtest
+```
+
+### Utveckling
+```bash
+# Formatera kod
+make format
+
+# Kör tester
+make test
+
+# Starta interaktiv shell
+make shell
+```
+
+## Projektstruktur
+
+```
+tradingbot/
+├── src/
+│   ├── tradingbot.py      # Huvudapplikation
+│   ├── config_loader.py   # Konfigurationshantering
+│   └── modules/
+│       ├── indicators.py  # Tekniska indikatorer
+│       ├── orders.py      # Orderhantering
+│       └── utils.py       # Hjälpfunktioner
+├── tests/                 # Tester
+├── config.json           # Konfiguration
+├── environment.yml       # Conda-miljö
+└── Makefile             # Byggkommandon
+```
+
+## Konfiguration
+
+Se `config.json` för alla konfigurationsalternativ. Viktiga inställningar:
+
+- `EXCHANGE`: Börs att handla på
+- `SYMBOL`: Handlingspar
+- `TIMEFRAME`: Tidsram för candles
+- `EMA_LENGTH`: EMA-period
+- `VOLUME_MULTIPLIER`: Volymfilter
+- `STOP_LOSS_PERCENT`: Stop-loss i procent
+- `TAKE_PROFIT_PERCENT`: Take-profit i procent
+- `RISK_PER_TRADE`: Risk per trade i procent
+
+## Säkerhet
+
+- API-nycklar hanteras via .env
+- Säker nonce-hantering
+- Validering av indata
+- HTTPS för API-anrop
+
+## Licens
+
+MIT

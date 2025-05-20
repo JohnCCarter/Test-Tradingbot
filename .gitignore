@@ -186,3 +186,10 @@ order_status_log.txt
 
 Miniconda3-latest-Linux-x86_64.sh
 backtest_result.json
+node_modules
+
+# Next.js build output
+.next/
+
+# Test results directory
+test_results/
