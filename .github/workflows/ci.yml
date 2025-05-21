@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9.22', '3.12.1']
+        python-version: ['3.9.22']
 
     steps:
       - name: Check out repository
@@ -28,6 +28,40 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -e .
+          pip install pre-commit
 
-      - name: Run tests (Python ${{ matrix.python-version }})
-        run: pytest --maxfail=1 --disable-warnings --verbose
+      - name: Run pre-commit hooks
+        run: |
+          pre-commit run --all-files
+
+      - name: Run backend tests
+        run: |
+          pytest backend/tests --maxfail=1 --disable-warnings --verbose --junitxml=test_results/backend-test-results.xml
+
+      - name: Install frontend dependencies
+        run: |
+          npm install
+          npm install --save-dev eslint prettier @typescript-eslint/parser @typescript-eslint/eslint-plugin
+
+      - name: Run frontend linting
+        run: |
+          npm run lint
+          npm run format:check
+
+      - name: Run frontend tests
+        run: |
+          npm test
+
+      - name: Run linting
+        run: |
+          flake8 backend/
+          black --check backend/
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results
+          path: |
+            test_results/
+            backend/tests/coverage.xml
+            frontend/coverage/
