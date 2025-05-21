@@ -57,8 +57,16 @@ jobs:
           flake8 backend/
           black --check backend/
 
+      - name: Debug artifact paths
+        run: |
+          echo "Arbetskatalog:"
+          pwd
+          echo "Alla filer och mappar:"
+          ls -R
+
       - name: Upload test results
         uses: actions/upload-artifact@v2
+        if: always()
         with:
           name: test-results
           path: |
