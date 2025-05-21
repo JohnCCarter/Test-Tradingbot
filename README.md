@@ -12,24 +12,79 @@ En Python-baserad tradingbot som använder FVG breakout strategi med EMA, volym 
 - E-postnotifieringar
 - Metrik- och hälsöövervakning
 
+## Projektstruktur
+
+```
+trading-bot/
+├── frontend/                 # Next.js frontend
+│   ├── src/
+│   │   ├── app/            # Next.js app router
+│   │   ├── components/     # React components
+│   │   └── styles/        # CSS/SCSS files
+│   ├── public/            # Static files
+│   ├── package.json
+│   └── next.config.js
+│
+├── backend/                # Flask backend
+│   ├── src/
+│   │   ├── modules/       # Trading modules
+│   │   ├── templates/     # Flask templates
+│   │   └── dashboard.py   # Main Flask app
+│   ├── tests/            # Backend tests
+│   └── requirements.txt
+│
+├── logs/                  # Log files
+├── .env                  # Environment variables
+└── config.json           # Bot configuration
+```
+
 ## Installation
 
-1. Klona repot:
+### Backend
 ```bash
-git clone <repo-url>
-cd tradingbot
+cd backend
+python -m venv venv
+source venv/bin/activate  # eller `venv\Scripts\activate` på Windows
+pip install -r requirements.txt
 ```
 
-2. Skapa och aktivera conda-miljön:
+### Frontend
 ```bash
-make update-env
-conda activate tradingbot_env
+cd frontend
+npm install
 ```
 
-3. Konfigurera miljövariabler:
+## Utveckling
+
+### Starta utvecklingsservrar
+
+1. Starta backend:
 ```bash
-cp .env.example .env
-# Redigera .env med dina API-nycklar
+cd backend
+python src/dashboard.py
+```
+
+2. Starta frontend:
+```bash
+cd frontend
+npm run dev
+```
+
+Backend körs på http://localhost:5000
+Frontend körs på http://localhost:3000
+
+## Testning
+
+### Backend tester
+```bash
+cd backend
+pytest
+```
+
+### Frontend tester
+```bash
+cd frontend
+npm test
 ```
 
 ## Användning
@@ -54,23 +109,6 @@ make test
 
 # Starta interaktiv shell
 make shell
-```
-
-## Projektstruktur
-
-```
-tradingbot/
-├── src/
-│   ├── tradingbot.py      # Huvudapplikation
-│   ├── config_loader.py   # Konfigurationshantering
-│   └── modules/
-│       ├── indicators.py  # Tekniska indikatorer
-│       ├── orders.py      # Orderhantering
-│       └── utils.py       # Hjälpfunktioner
-├── tests/                 # Tester
-├── config.json           # Konfiguration
-├── environment.yml       # Conda-miljö
-└── Makefile             # Byggkommandon
 ```
 
 ## Konfiguration

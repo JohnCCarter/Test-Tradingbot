@@ -65,12 +65,13 @@ När du hjälper mig med min tradingbot, vänligen:
 * Använd grep\_search för att hitta specifika mönster
 * Använd list\_dir för att utforska filstrukturen
 
-6.
+6. Arbetsmetod:
 
 * Jobba stegvis, systematiskt, metodiskt.
 * Skriv kod som är lättläst och underhållbar.
 * Använd kommentarer och dokumentation för att förklara dina tankar och åtgärder.
 * Kontrollera alltid dina ändringar med hjälp av tester och kontrollfunktioner.
 * Försök att minimera risker och potentiella problem.
+* Kontrollera alltid mappstrukturen och filnamnen innan du skapar nya filer.
 
 Om något är oklart eller om du behöver mer information, fråga gärna!

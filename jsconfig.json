@@ -2,7 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["frontend/src/*"]
     },
     "jsx": "react-jsx",
     "module": "esnext",
@@ -18,6 +18,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*"],
+  "include": ["frontend/src/**/*"],
   "exclude": ["node_modules"]
 } 
