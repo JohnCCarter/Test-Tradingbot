@@ -1,12 +1,14 @@
 # src/config_loader.py
 
-import os
 import json
-from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+import os
 from typing import Optional
 
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+
 load_dotenv()
+
 
 class BotConfig(BaseModel):
     """
@@ -60,6 +62,7 @@ class BotConfig(BaseModel):
     METRICS_PORT: Optional[int] = None
     HEALTH_PORT: Optional[int] = None
 
+
 def load_config(path: str = "config.json") -> BotConfig:
     """
     Läser in JSON-konfiguration + miljövariabler (.env) och returnerar
@@ -78,7 +81,7 @@ def load_config(path: str = "config.json") -> BotConfig:
         raise ValueError("Sätt API_KEY och API_SECRET i din .env-fil")
 
     # E-post-överskrivningar (om satt i .env)
-    raw["EMAIL_SENDER"]   = os.getenv("EMAIL_SENDER",   raw.get("EMAIL_SENDER"))
+    raw["EMAIL_SENDER"] = os.getenv("EMAIL_SENDER", raw.get("EMAIL_SENDER"))
     raw["EMAIL_RECEIVER"] = os.getenv("EMAIL_RECEIVER", raw.get("EMAIL_RECEIVER"))
     raw["EMAIL_PASSWORD"] = os.getenv("EMAIL_PASSWORD", raw.get("EMAIL_PASSWORD"))
 
@@ -86,8 +89,4 @@ def load_config(path: str = "config.json") -> BotConfig:
     raw.pop("API_KEY", None)
     raw.pop("API_SECRET", None)
 
-    return BotConfig(
-        API_KEY=api_key,
-        API_SECRET=api_secret,
-        **raw
-    )
+    return BotConfig(API_KEY=api_key, API_SECRET=api_secret, **raw)

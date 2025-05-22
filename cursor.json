@@ -1,0 +1,16 @@
+{
+    "entryPoints": [
+      "start_servers.py",
+      "frontend/src/app/",
+      "backend/src/"
+    ],
+    "ignoredPaths": [
+      "node_modules/",
+      ".next/",
+      "__pycache__/",
+      "logs/",
+      "test_results/",
+      "src_backup/"
+    ]
+  }
+  

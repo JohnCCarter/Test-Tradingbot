@@ -3,18 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import React from 'react';
+import PropTypes from 'prop-types';
 
 export default function Dashboard({ params, searchParams }) {
   React.use(params);
   React.use(searchParams);
 
-  const [metrics, setMetrics] = useState({
-    total_trades: 0,
-    winning_trades: 0,
-    losing_trades: 0,
-    total_pnl: 0,
-    win_rate: 0
-  });
   const [balance, setBalance] = useState({});
   const [recentTrades, setRecentTrades] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,7 +46,6 @@ export default function Dashboard({ params, searchParams }) {
     TP_WINDOW_MULTIPLIER: '',
   });
 
-  const [pnlHistory, setPnlHistory] = useState([]);
   const [tradeAmount, setTradeAmount] = useState('');
   const [tradeType, setTradeType] = useState('buy');
   const [tradeStatus, setTradeStatus] = useState('');
@@ -121,7 +114,6 @@ export default function Dashboard({ params, searchParams }) {
         }
         const data = await response.json();
         setSettings(data);
-        console.log('Settings fetched:', data);
       } catch (error) {
         console.error('Error fetching settings:', error);
         setError(`Kunde inte hämta inställningar: ${error.message}`);
@@ -138,7 +130,6 @@ export default function Dashboard({ params, searchParams }) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      setMetrics(data.metrics || { total_trades: 0, winning_trades: 0, losing_trades: 0, total_pnl: 0, win_rate: 0 });
       
       // Ensure balance values are numbers
       const processedBalance = {};
@@ -150,12 +141,9 @@ export default function Dashboard({ params, searchParams }) {
       setBalance(processedBalance);
       
       setRecentTrades(data.trade_history || []);
-      setPnlHistory(data.pnl_history || []);
       setIsRunning(data.is_running);
       setIsLoading(false);
-      console.log('Metrics fetched:', data);
     } catch (error) {
-      console.error('Error fetching metrics:', error);
       setError(`Kunde inte hämta data: ${error.message}`);
       setIsLoading(false);
     }
@@ -187,10 +175,8 @@ export default function Dashboard({ params, searchParams }) {
 
       const data = await response.json();
       setIsRunning(data.is_running);
-      console.log(`Bot status toggled: ${data.is_running}`, data);
       fetchMetrics();
     } catch (error) {
-      console.error('Error toggling bot:', error);
       setError(`Kunde inte ändra botens status: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -223,8 +209,7 @@ export default function Dashboard({ params, searchParams }) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const result = await response.json();
-      console.log('Settings saved:', result);
+      await response.json();
       const updatedSettingsResponse = await fetch('/api/settings');
       if (!updatedSettingsResponse.ok) {
         throw new Error(`HTTP error! status: ${updatedSettingsResponse.status}`);
@@ -232,7 +217,6 @@ export default function Dashboard({ params, searchParams }) {
       const updatedSettings = await updatedSettingsResponse.json();
       setSettings(updatedSettings);
     } catch (error) {
-      console.error('Error saving settings:', error);
       setError(`Kunde inte spara inställningar: ${error.message}`);
     } finally {
       setIsLoading(false);
@@ -602,3 +586,13 @@ export default function Dashboard({ params, searchParams }) {
     </div>
   );
 }
+
+Dashboard.propTypes = {
+  params: PropTypes.object,
+  searchParams: PropTypes.object
+};
+
+Dashboard.defaultProps = {
+  params: {},
+  searchParams: {}
+};

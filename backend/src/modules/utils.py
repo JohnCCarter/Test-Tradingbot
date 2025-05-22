@@ -1,15 +1,20 @@
 import functools
-import time
 import json
 import os
+import time
 from typing import Callable
+import logging
+
+logger = logging.getLogger(__name__)
 
 NONCE_FILE = os.path.join(os.path.dirname(__file__), "nonce.json")
+
 
 def retry(max_attempts: int = 3, initial_delay: float = 1.0) -> Callable:
     """
     Decorator for retrying a function with exponential backoff.
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -24,8 +29,11 @@ def retry(max_attempts: int = 3, initial_delay: float = 1.0) -> Callable:
                         raise
                     time.sleep(delay)
                     delay *= 2
+
         return wrapper
+
     return decorator
+
 
 def ensure_paper_trading_symbol(symbol: str) -> str:
     """
@@ -35,18 +43,19 @@ def ensure_paper_trading_symbol(symbol: str) -> str:
     # If it's already a paper trading symbol, return as is
     if symbol.startswith("tTEST"):
         return symbol
-        
+
     # If it's a regular trading symbol (e.g. BTC/USD), convert it
     if "/" in symbol:
         base, quote = symbol.split("/")
         return f"tTEST{base}:TEST{quote}"
-        
+
     # If it's already in Bitfinex format (e.g. tBTCUSD), convert it
     if symbol.startswith("t") and not symbol.startswith("tTEST"):
         return f"tTEST{symbol[1:]}"
-        
+
     # For any other format, try to convert it
     return f"tTEST{symbol}"
+
 
 def get_next_nonce() -> int:
     """
@@ -62,3 +71,24 @@ def get_next_nonce() -> int:
     with open(NONCE_FILE, "w") as f:
         json.dump({"last_nonce": next_nonce}, f)
     return next_nonce
+
+
+def save_nonce(nonce):
+    """Save nonce to file"""
+    try:
+        with open(NONCE_FILE, 'w', encoding='utf-8') as f:
+            f.write(str(nonce))
+    except Exception as e:
+        logger.error("Error saving nonce: %s", e)
+        raise
+
+
+def load_nonce():
+    """Load nonce from file"""
+    try:
+        if os.path.exists(NONCE_FILE):
+            with open(NONCE_FILE, 'r', encoding='utf-8') as f:
+                return int(f.read().strip())
+    except Exception as e:
+        logger.error("Error loading nonce: %s", e)
+    return 0

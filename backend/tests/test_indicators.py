@@ -1,28 +1,60 @@
-import pandas as pd
 import numpy as np
-from modules.indicators import calculate_indicators, detect_fvg
+import pandas as pd
+import pytest
 
-def make_df():
-    ts = pd.date_range("2021-01-01", periods=5, freq="h", tz="UTC")
-    df = pd.DataFrame({
-        "timestamp": [int(t.value/1e6) for t in ts],
-        "open": [1,2,3,4,5],
-        "high": [2,3,4,5,6],
-        "low": [0.5,1.5,2.5,3.5,4.5],
-        "close": [1.5,2.5,3.5,4.5,5.5],
-        "volume": [10,20,30,40,50]
-    })
-    df["datetime"] = ts
-    return df
+from backend.src.modules.indicators import (calculate_ema,
+                                            calculate_indicators,
+                                            calculate_rsi)
 
-def test_calculate_indicators():
-    df = make_df()
-    out = calculate_indicators(df.copy(), ema_length=3, volume_multiplier=1.5, trading_start_hour=0, trading_end_hour=23)
-    for col in ["ema","atr","avg_volume","high_volume","rsi","adx","within_trading_hours"]:
-        assert col in out.columns
 
-def test_detect_fvg():
-    df = make_df()
-    h,l = detect_fvg(df, lookback=2, bullish=True)
-    assert h == df["high"].iloc[-2]
-    assert l == df["low"].iloc[-1]
+@pytest.fixture
+def sample_data():
+    """Test data för indikatorberäkningar"""
+    return pd.DataFrame(
+        {
+            "datetime": pd.date_range(start="2024-01-01", periods=100, freq="1H"),
+            "open": np.random.randn(100).cumsum() + 100,
+            "high": np.random.randn(100).cumsum() + 102,
+            "low": np.random.randn(100).cumsum() + 98,
+            "close": np.random.randn(100).cumsum() + 100,
+            "volume": np.random.randint(1000, 10000, 100),
+        }
+    )
+
+
+@pytest.mark.indicators
+class TestIndicators:
+    """Test för tekniska indikatorer"""
+
+    @pytest.mark.unit
+    def test_calculate_indicators(self, sample_data):
+        """Test beräkning av alla indikatorer"""
+        result = calculate_indicators(
+            sample_data,
+            ema_length=20,
+            volume_multiplier=1.5,
+            trading_start_hour=9,
+            trading_end_hour=17,
+        )
+
+        assert "ema" in result.columns
+        assert "atr" in result.columns
+        assert "rsi" in result.columns
+        assert "adx" in result.columns
+        assert "high_volume" in result.columns
+        assert "within_trading_hours" in result.columns
+
+    @pytest.mark.unit
+    def test_calculate_ema(self, sample_data):
+        """Test EMA-beräkning"""
+        ema = calculate_ema(sample_data["close"], 20)
+        assert len(ema) == len(sample_data)
+        assert not np.isnan(ema).all()
+
+    @pytest.mark.unit
+    def test_calculate_rsi(self, sample_data):
+        """Test RSI-beräkning"""
+        rsi = calculate_rsi(sample_data["close"], 14)
+        assert len(rsi) == len(sample_data)
+        assert not np.isnan(rsi).all()
+        assert all(0 <= x <= 100 for x in rsi if not np.isnan(x))

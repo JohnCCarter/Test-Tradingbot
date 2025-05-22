@@ -1,7 +1,12 @@
-import ccxt
-from typing import Any, Optional
-from .utils import ensure_paper_trading_symbol
+import logging
 import os
+from typing import Any, Optional
+
+import ccxt
+
+from backend.src.modules.utils import ensure_paper_trading_symbol
+
+logger = logging.getLogger(__name__)
 
 NONCE_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "nonce.json")
 
@@ -9,10 +14,7 @@ _exchange: Optional[ccxt.Exchange] = None
 
 
 def calculate_position_size(
-    equity: float,
-    risk_per_trade: float,
-    entry_price: float,
-    stop_loss_price: float
+    equity: float, risk_per_trade: float, entry_price: float, stop_loss_price: float
 ) -> float:
     """
     Calculate how many units to trade to risk a given fraction of equity.
@@ -33,11 +35,7 @@ def calculate_position_size(
     return max_risk_amount / risk_per_unit
 
 
-def init_exchange(
-    api_key: str,
-    api_secret: str,
-    exchange_name: str
-) -> ccxt.Exchange:
+def init_exchange(api_key: str, api_secret: str, exchange_name: str) -> ccxt.Exchange:
     """
     Initialize and return a ccxt.Exchange instance.
 
@@ -47,21 +45,30 @@ def init_exchange(
     exchange_cls = getattr(ccxt, exchange_name.lower(), None)
     if not exchange_cls:
         raise ValueError(f"Unsupported exchange: {exchange_name}")
-    
-    _exchange = exchange_cls({
-        "apiKey": api_key,
-        "secret": api_secret,
-        "enableRateLimit": True,
-        "options": {
-            "paper": True,  # Enable paper trading
-            "defaultType": "spot"
+
+    _exchange = exchange_cls(
+        {
+            "apiKey": api_key,
+            "secret": api_secret,
+            "enableRateLimit": True,
+            "options": {"paper": True, "defaultType": "spot"},  # Enable paper trading
         }
-    })
-    
-    # Load markets and print available symbols for debugging
-    _exchange.load_markets()
-    print("Available symbols:", list(_exchange.markets.keys()))
-    
+    )
+
+    if _exchange is None:
+        raise RuntimeError("Failed to initialize exchange instance")
+
+    try:
+        # Load markets and log available symbols
+        _exchange.load_markets()
+        if _exchange.markets:
+            logger.info("Available symbols: %s", list(_exchange.markets.keys()))
+        else:
+            logger.warning("No markets loaded from exchange")
+    except Exception as e:
+        logger.error(f"Error loading markets: {e}")
+        raise
+
     return _exchange
 
 
@@ -82,7 +89,9 @@ def place_order(*args, **kwargs) -> Any:
         price = kwargs.get("price", None)
         params = kwargs.get("params", None)
         if price is not None:
-            return exchange.create_limit_order(symbol, order_type, amount, price, params)
+            return exchange.create_limit_order(
+                symbol, order_type, amount, price, params
+            )
         return exchange.create_market_order(symbol, order_type, amount, params)
 
     # Production: use global _exchange
@@ -108,11 +117,7 @@ def place_order(*args, **kwargs) -> Any:
         raise ValueError(f"Unknown order type: {order_type}")
 
 
-def cancel_order(
-    exchange: Any,
-    order_id: str,
-    symbol: Optional[str] = None
-) -> Any:
+def cancel_order(exchange: Any, order_id: str, symbol: Optional[str] = None) -> Any:
     """
     Cancel an order on the given exchange.
 
@@ -121,7 +126,11 @@ def cancel_order(
     :param symbol: Optional symbol, required by some exchanges.
     :return: API response dict.
     """
-    return exchange.cancel_order(order_id, symbol) if symbol else exchange.cancel_order(order_id)
+    return (
+        exchange.cancel_order(order_id, symbol)
+        if symbol
+        else exchange.cancel_order(order_id)
+    )
 
 
 def fetch_balance(exchange: Any) -> dict:
