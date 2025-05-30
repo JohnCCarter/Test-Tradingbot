@@ -16,7 +16,7 @@ setup(
     author="John Carter",
     license="MIT",
     python_requires=">=3.9",
-    packages=["backend", "backend.src", "backend.src.modules"],
+    packages=find_packages(include=["backend", "backend.*"]),
     include_package_data=True,
     install_requires=[
         "Flask",
