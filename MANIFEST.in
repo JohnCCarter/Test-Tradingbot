@@ -1,0 +1,5 @@
+include README.md
+include LICENSE
+recursive-include backend/src/templates *
+recursive-include backend/src/modules *
+recursive-include backend/src *.py
