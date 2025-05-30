@@ -2,9 +2,15 @@
 
 import ccxt
 import pytest
-from modules.orders import (calculate_position_size, cancel_order,
-                            fetch_balance, init_exchange, place_order)
-from modules.utils import ensure_paper_trading_symbol
+
+from backend.src.modules.orders import (
+    calculate_position_size,
+    cancel_order,
+    fetch_balance,
+    init_exchange,
+    place_order,
+)
+from backend.src.modules.utils import ensure_paper_trading_symbol
 
 # --- existing tests for orders.py ---
 
@@ -48,7 +54,10 @@ class DummyExchange:
 
 def test_place_market_order():
     ex = DummyExchange()
-    res = place_order(ex, "BTC/USD", "buy", 0.5)
+    import backend.src.modules.orders as orders
+
+    orders._Exchange = ex
+    res = place_order("market", "BTC/USD", 0.5)
     assert res["method"] == "market"
     assert res["side"] == "buy"
     assert res["amount"] == 0.5
@@ -56,7 +65,10 @@ def test_place_market_order():
 
 def test_place_limit_order():
     ex = DummyExchange()
-    res = place_order(ex, "BTC/USD", "sell", 0.1, price=50)
+    import backend.src.modules.orders as orders
+
+    orders._Exchange = ex
+    res = place_order("limit", "BTC/USD", 0.1, price=50)
     assert res["method"] == "limit"
     assert res["price"] == 50
 
@@ -98,6 +110,12 @@ def test_calculate_position_size_zero_distance():
     # entry_price == stop_loss_price should raise ValueError
     with pytest.raises(ValueError):
         calculate_position_size(1000.0, 0.01, 50.0, 50.0)
+
+
+def test_calculate_position_size_negative_distance():
+    # Negative distance (stop_loss above entry for long) also invalid
+    with pytest.raises(ValueError):
+        calculate_position_size(1000.0, 0.01, 50.0, 55.0)
 
 
 def test_calculate_position_size_negative_distance():

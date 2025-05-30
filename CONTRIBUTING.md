@@ -7,6 +7,7 @@ Detta projekt består av en tradingbot med backend i Python/Flask och frontend i
 ## 🔹 Teknikstack
 
 ### Backend
+
 - Python 3.9+
 - Flask (API + dashboard)
 - `asyncio` för asynkron struktur
@@ -18,6 +19,7 @@ Detta projekt består av en tradingbot med backend i Python/Flask och frontend i
 - Docker, Makefile, .env, config.json
 
 ### Frontend
+
 - Node.js v24, npm v11
 - Next.js med App Router (`src/app/`)
 - TypeScript / JavaScript (jsconfig-styrt)
@@ -28,23 +30,27 @@ Detta projekt består av en tradingbot med backend i Python/Flask och frontend i
 ## 🧠 Cursor-regler
 
 ### Kodförståelse
+
 - Analysera strategin (FVG breakout med EMA, volym och tidsfönster)
 - Förstå riskhantering (SL/TP, position sizing)
 - Identifiera beroenden mellan moduler innan kodändringar görs
 
 ### Kodändringar
+
 - Bevara asynkron struktur (`async def`) i `tradingbot.py`
 - Använd alltid `retry-decorator` enligt befintligt mönster
 - Validera konfig med `Pydantic`
 - Säkerställ testbarhet med `pytest`
 
 ### Implementering
+
 - Använd `edit_file()` – ändra endast det som behövs
 - Lägg till alla nödvändiga `imports`
 - Uppdatera relaterade tester om funktionalitet påverkas
 - Följ PEP 8 och använd `black` + `isort`
 
-### Varje ändring ska inkludera:
+### Varje ändring ska inkludera
+
 - Förklaring av vad som ändras och varför
 - Verifiering att ändringen fungerar
 - Kontroll att alla tester passerar

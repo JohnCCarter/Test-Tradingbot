@@ -18,7 +18,7 @@ En Python-baserad tradingbot som använder FVG breakout-strategi med EMA, volym 
 
 ## 🧠 Struktur (används av Cursor AI)
 
-```
+```plaintext
 trading-bot/
 ├── backend/src/dashboard.py    # Huvudserver (Flask)
 ├── frontend/src/app/           # Next.js App Router
@@ -40,13 +40,13 @@ trading-bot/
 ```bash
 cd backend
 conda env create -f environment.yml
-conda activate tradingbot
+conda activate tradingbot_env
 ```
 
 > 🔍 Obs! Ersätt `tradingbot` med det namn du har definierat i `environment.yml` under `name:`.
 
+### Frontend Installation
 
-### Frontend
 ```bash
 cd frontend
 npm install
@@ -59,11 +59,13 @@ npm install
 ### Starta båda servrar
 
 #### Bash
+
 ```bash
 python3 start_servers.py
 ```
 
 #### PowerShell
+
 ```powershell
 python .\start_servers.py
 ```
@@ -76,12 +78,14 @@ Frontend körs på: `http://localhost:3000`
 ## 🧪 Testning
 
 ### Backend
+
 ```bash
 cd backend
 pytest
 ```
 
 ### Frontend
+
 ```bash
 cd frontend
 npm test
@@ -151,7 +155,7 @@ make shell       # Interaktiv utvecklingssession
 - TypeScript / JavaScript (styrs av `jsconfig.json`)
 - Konfigfiler: `next.config.js`, `package.json`, `package-lock.json`
 
-#### 🛠 Viktigt:
+#### 🛠 Viktigt
 
 - Frontend körs via `npm run dev`
 - Backend startas via `flask run` (via dashboard.py)
@@ -164,3 +168,26 @@ make shell       # Interaktiv utvecklingssession
 ## 📜 Licens
 
 None
+
+## Starta dashboarden korrekt
+
+För att undvika importfel, starta alltid dashboarden så här från projektroten:
+
+```bash
+python -m backend.src.dashboard
+python -m dashboard
+```
+
+**Starta aldrig med:**  
+
+```bash
+python backend/src/dashboard.py
+```
+
+eller  
+
+```bash
+python dashboard.py
+```
+
+Detta ger importfel på grund av relativa imports i koden.

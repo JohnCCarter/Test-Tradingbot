@@ -18,11 +18,10 @@ from colorama import Back, Fore, Style, init
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 
-from backend.src.config_loader import load_config
-from backend.src.modules.indicators import calculate_indicators
-from backend.src.modules.orders import (fetch_balance, init_exchange,
-                                        place_order)
-from backend.src.tradingbot import TradingBot
+from .config_loader import load_config
+from .modules.indicators import calculate_indicators
+from .modules.orders import fetch_balance, init_exchange, place_order
+from .tradingbot import TradingBot
 
 # Initialize colorama for Windows
 init()
@@ -188,9 +187,9 @@ def print_status_update():
     status = f"""
 {Fore.CYAN}╔════════════════════════════════════════════════════════════╗
 ║{Style.BRIGHT}                    Status Update                        {Style.NORMAL}║
-║{Fore.GREEN}● Bot Status: {'Running' if bot.is_running else 'Stopped'}{Fore.WHITE}                    ║
-║{Fore.YELLOW}● Last Update: {trading_state['last_update']}{Fore.WHITE}                ║
-║{Fore.BLUE}● Active Trades: {len(bot.trade_history)}{Fore.WHITE}                                ║
+║{Fore.GREEN}● Bot Status: {'Running' if getattr(bot, 'is_running', False) else 'Stopped'}{Fore.WHITE}                    ║
+║{Fore.YELLOW}● Last Update: {trading_state.get('last_update')}{Fore.WHITE}                ║
+║{Fore.BLUE}● Active Trades: {len(getattr(bot, 'trade_history', []))}{Fore.WHITE}                                ║
 ╚════════════════════════════════════════════════════════════╝{Style.RESET_ALL}
 """
     print(status)
@@ -203,8 +202,10 @@ def cleanup():
         if bot.is_running:
             bot.stop()
         # Kill any process using our port
-        if os.name == 'nt':  # Windows
-            os.system(f'netstat -ano | findstr :{cfg.METRICS_PORT} > nul && taskkill /F /PID %ERRORLEVEL%')
+        if os.name == "nt":  # Windows
+            os.system(
+                f"netstat -ano | findstr :{cfg.METRICS_PORT} > nul && taskkill /F /PID %ERRORLEVEL%"
+            )
         else:  # Unix/Linux
             os.system(f"lsof -ti:{cfg.METRICS_PORT} | xargs kill -9")
     except Exception as e:

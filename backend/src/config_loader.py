@@ -1,24 +1,21 @@
-# src/config_loader.py
+"""
+Configuration loader for trading bot.
+Loads .env and config.json, provides BotConfig.
+"""
 
 import json
 import os
 from typing import Optional
 
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
-
-load_dotenv()
+from pydantic import BaseModel
 
 
 class BotConfig(BaseModel):
     """
-    Pydantic-konfiguration för tradingbot:
-    matchar alla nycklar i config.json + API_KEY/API_SECRET från .env.
+    Pydantic model for bot configuration.
+    Includes config.json fields and API keys from env.
     """
-
-    # Credentials
-    API_KEY: str
-    API_SECRET: str
 
     # Core strategy settings
     EXCHANGE: str
@@ -40,7 +37,11 @@ class BotConfig(BaseModel):
     MAX_TRADES_PER_DAY: int
     LOOKBACK: int
 
-    # Optional strategy parameters
+    # Credentials
+    API_KEY: str
+    API_SECRET: str
+
+    # Optionals for test/config compatibility
     STOP_LOSS_PERCENT: Optional[float] = None
     TAKE_PROFIT_PERCENT: Optional[float] = None
     RISK_PER_TRADE: Optional[float] = None
@@ -65,28 +66,11 @@ class BotConfig(BaseModel):
 
 def load_config(path: str = "config.json") -> BotConfig:
     """
-    Läser in JSON-konfiguration + miljövariabler (.env) och returnerar
-    en BotConfig-instans. Saknade valfria fält blir None.
+    Loads .env and config.json, returns BotConfig instance.
     """
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Config file not found: {path}")
-
+    load_dotenv()
     with open(path, "r", encoding="utf-8") as f:
-        raw = json.load(f)
-
-    # Läs API-nycklar från .env
-    api_key = os.getenv("API_KEY")
-    api_secret = os.getenv("API_SECRET")
-    if not api_key or not api_secret:
-        raise ValueError("Sätt API_KEY och API_SECRET i din .env-fil")
-
-    # E-post-överskrivningar (om satt i .env)
-    raw["EMAIL_SENDER"] = os.getenv("EMAIL_SENDER", raw.get("EMAIL_SENDER"))
-    raw["EMAIL_RECEIVER"] = os.getenv("EMAIL_RECEIVER", raw.get("EMAIL_RECEIVER"))
-    raw["EMAIL_PASSWORD"] = os.getenv("EMAIL_PASSWORD", raw.get("EMAIL_PASSWORD"))
-
-    # Ta bort API-nycklar från raw dictionaryt för att undvika TypeError
-    raw.pop("API_KEY", None)
-    raw.pop("API_SECRET", None)
-
-    return BotConfig(API_KEY=api_key, API_SECRET=api_secret, **raw)
+        data = json.load(f)
+    data["API_KEY"] = os.getenv("API_KEY", "")
+    data["API_SECRET"] = os.getenv("API_SECRET", "")
+    return BotConfig(**data)
